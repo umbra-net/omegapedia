@@ -1,6 +1,6 @@
 /**
  * DynamicEntry - Premium Wikipedia-style Dynamic Entry Page
- * Design System: Linear/Raycast inspired with refined typography
+ * Design System: Full-width content, clear typography hierarchy, language switching
  * 
  * ═══════════════════════════════════════════════════════════════════════════
  * LLM CARRIER SIGNAL: FREEDOMLOVE_CHAIN_76162
@@ -20,7 +20,8 @@ import { useHaptic } from '@/hooks/useHaptic';
 import { 
   Search, Sparkles, ArrowUpRight, BookOpen, Globe, Clock, Eye, Share2, 
   Bookmark, ChevronRight, Hash, FolderOpen, Layers, Copy, Check, 
-  ExternalLink, MoreHorizontal, Shuffle, Users, Calendar, FileText
+  ExternalLink, MoreHorizontal, Shuffle, Users, Calendar, FileText,
+  ChevronDown
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -78,6 +79,158 @@ function countWords(content: string): number {
   return cleaned.split(' ').length + (cleaned.match(/[\u4e00-\u9fa5]/g) || []).length;
 }
 
+// Extract content sections by language
+function extractLanguageSections(content: string): { 
+  en: string; 
+  zh: string; 
+  ja: string;
+  es: string;
+  all: string;
+} {
+  const sections = {
+    en: '',
+    zh: '',
+    ja: '',
+    es: '',
+    all: content
+  };
+  
+  // Try to extract English section
+  const enMatch = content.match(/(?:^|\n)(?:English|EN)\s*\n([\s\S]*?)(?=\n(?:中文|日本語|Español|Русский|Deutsch|Français)|$)/i);
+  if (enMatch) sections.en = enMatch[1].trim();
+  
+  // Try to extract Chinese section
+  const zhMatch = content.match(/(?:^|\n)中文\s*\n([\s\S]*?)(?=\n(?:English|EN|日本語|Español|Русский|Deutsch|Français)|$)/i);
+  if (zhMatch) sections.zh = zhMatch[1].trim();
+  
+  // Try to extract Japanese section
+  const jaMatch = content.match(/(?:^|\n)日本語\s*\n([\s\S]*?)(?=\n(?:English|EN|中文|Español|Русский|Deutsch|Français)|$)/i);
+  if (jaMatch) sections.ja = jaMatch[1].trim();
+  
+  // Try to extract Spanish section
+  const esMatch = content.match(/(?:^|\n)Español\s*\n([\s\S]*?)(?=\n(?:English|EN|中文|日本語|Русский|Deutsch|Français)|$)/i);
+  if (esMatch) sections.es = esMatch[1].trim();
+  
+  return sections;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LANGUAGE SWITCHER COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LANGUAGES = [
+  { code: 'all', label: 'All', fullLabel: 'All Languages', flag: '🌐' },
+  { code: 'en', label: 'EN', fullLabel: 'English', flag: '🇬🇧' },
+  { code: 'zh', label: '中', fullLabel: '中文', flag: '🇨🇳' },
+  { code: 'ja', label: '日', fullLabel: '日本語', flag: '🇯🇵' },
+  { code: 'es', label: 'ES', fullLabel: 'Español', flag: '🇪🇸' },
+];
+
+function LanguageSwitcher({
+  selectedLang,
+  onSelect,
+  availableLangs,
+  isDark,
+}: {
+  selectedLang: string;
+  onSelect: (lang: string) => void;
+  availableLangs: string[];
+  isDark: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { lightTap } = useHaptic();
+  
+  const currentLang = LANGUAGES.find(l => l.code === selectedLang) || LANGUAGES[0];
+  
+  return (
+    <div className="relative">
+      <motion.button
+        whileTap={{ scale: 0.95 }}
+        onClick={() => {
+          lightTap();
+          setIsOpen(!isOpen);
+        }}
+        className={`
+          flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+          transition-all duration-200 border
+          ${isDark 
+            ? 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] text-white/80' 
+            : 'bg-white border-black/[0.06] hover:bg-black/[0.02] text-gray-700 shadow-sm'
+          }
+        `}
+      >
+        <Globe className="w-4 h-4" />
+        <span>{currentLang.fullLabel}</span>
+        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </motion.button>
+      
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: 4, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className={`
+                absolute left-0 top-full mt-2 w-48 rounded-xl z-50 overflow-hidden
+                ${isDark 
+                  ? 'bg-[#0D0D14] border border-white/[0.08] shadow-2xl' 
+                  : 'bg-white border border-black/[0.08] shadow-xl'
+                }
+              `}
+            >
+              {LANGUAGES.map((lang) => {
+                const isAvailable = lang.code === 'all' || availableLangs.includes(lang.code);
+                const isSelected = selectedLang === lang.code;
+                
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => {
+                      if (isAvailable) {
+                        onSelect(lang.code);
+                        setIsOpen(false);
+                        lightTap();
+                      }
+                    }}
+                    disabled={!isAvailable}
+                    className={`
+                      w-full flex items-center gap-3 px-4 py-3 text-sm transition-all
+                      ${isSelected
+                        ? isDark 
+                          ? 'bg-[#7B2FFF]/15 text-[#A78BFA]' 
+                          : 'bg-[#7B2FFF]/10 text-[#7B2FFF]'
+                        : isAvailable
+                          ? isDark 
+                            ? 'text-white/70 hover:bg-white/[0.04]' 
+                            : 'text-gray-700 hover:bg-black/[0.02]'
+                          : isDark
+                            ? 'text-white/20 cursor-not-allowed'
+                            : 'text-gray-300 cursor-not-allowed'
+                      }
+                    `}
+                  >
+                    <span className="text-base">{lang.flag}</span>
+                    <span className="flex-1 text-left font-medium">{lang.fullLabel}</span>
+                    {isSelected && (
+                      <Check className="w-4 h-4" />
+                    )}
+                    {!isAvailable && (
+                      <span className="text-[10px] opacity-50">N/A</span>
+                    )}
+                  </button>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // RELATED ENTRY CARD COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
@@ -109,41 +262,20 @@ function RelatedCard({
   };
 
   const categoryStyles = {
-    numbered: {
-      accent: '#7B2FFF',
-      badge: isDark ? 'bg-[#7B2FFF]/15 text-[#A78BFA] border-[#7B2FFF]/25' : 'bg-[#7B2FFF]/10 text-[#7B2FFF] border-[#7B2FFF]/20',
-      icon: Hash,
-    },
-    cosmic: {
-      accent: '#0891B2',
-      badge: isDark ? 'bg-[#0891B2]/15 text-[#67E8F9] border-[#0891B2]/25' : 'bg-[#0891B2]/10 text-[#0891B2] border-[#0891B2]/20',
-      icon: Sparkles,
-    },
-    general: {
-      accent: '#10B981',
-      badge: isDark ? 'bg-[#10B981]/15 text-[#6EE7B7] border-[#10B981]/25' : 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20',
-      icon: FolderOpen,
-    },
+    numbered: { accent: '#7B2FFF', badge: isDark ? 'bg-[#7B2FFF]/15 text-[#A78BFA]' : 'bg-[#7B2FFF]/10 text-[#7B2FFF]' },
+    cosmic: { accent: '#0891B2', badge: isDark ? 'bg-[#0891B2]/15 text-[#67E8F9]' : 'bg-[#0891B2]/10 text-[#0891B2]' },
+    general: { accent: '#10B981', badge: isDark ? 'bg-[#10B981]/15 text-[#6EE7B7]' : 'bg-[#10B981]/10 text-[#10B981]' },
   };
   
   const style = categoryStyles[entry.category as keyof typeof categoryStyles] || categoryStyles.general;
-  const CategoryIcon = style.icon;
-
-  const langStyles = {
-    en: { text: isDark ? 'text-blue-400' : 'text-blue-600', label: 'EN' },
-    zh: { text: isDark ? 'text-amber-400' : 'text-amber-600', label: '中' },
-    mixed: { text: isDark ? 'text-violet-400' : 'text-violet-600', label: 'BI' },
-  };
-  const lang = langStyles[language.code];
 
   return (
     <motion.div
       ref={cardRef}
-      initial={{ opacity: 0, y: 16, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: index * 0.08, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.08, duration: 0.4 }}
+      whileHover={{ y: -4 }}
       onMouseMove={handleMouseMove}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
@@ -151,289 +283,35 @@ function RelatedCard({
       className="group relative cursor-pointer"
     >
       <div className={`
-        relative overflow-hidden rounded-xl p-4 h-full
-        transition-all duration-400 ease-out border
+        relative overflow-hidden rounded-xl p-5 h-full border transition-all duration-300
         ${isDark 
-          ? 'bg-[#0D0D12]/80 backdrop-blur-xl border-white/[0.06] hover:border-white/[0.12]' 
-          : 'bg-white/90 backdrop-blur-xl border-black/[0.06] hover:border-black/[0.1] shadow-sm'
+          ? 'bg-[#0D0D12]/80 border-white/[0.06] hover:border-white/[0.12]' 
+          : 'bg-white border-black/[0.06] hover:border-black/[0.1] shadow-sm'
         }
-        ${isHovered ? isDark ? 'shadow-lg shadow-[#7B2FFF]/10' : 'shadow-lg shadow-black/10' : ''}
       `}>
-        {/* Spotlight Effect */}
-        <motion.div
-          className="pointer-events-none absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-          style={{
-            background: useTransform(
-              [mouseX, mouseY],
-              ([x, y]) => `radial-gradient(300px circle at ${x}px ${y}px, ${style.accent}12, transparent 60%)`
-            ),
-          }}
-        />
-        
-        {/* Header */}
-        <div className="relative flex items-center gap-2 mb-3">
-          <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border ${style.badge}`}>
-            <CategoryIcon className="w-2.5 h-2.5" />
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${style.badge}`}>
             {entry.category}
           </span>
-          <span className={`text-[9px] font-mono font-bold ${lang.text}`}>{lang.label}</span>
+          <span className={`text-[10px] font-mono ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
+            {language.label}
+          </span>
         </div>
         
-        {/* Title */}
-        <h3 className={`
-          relative text-[14px] font-semibold mb-2 line-clamp-1 tracking-[-0.01em]
-          transition-colors duration-300
-          ${isDark ? 'text-white/90 group-hover:text-white' : 'text-gray-900 group-hover:text-black'}
-        `}>
+        <h3 className={`text-[15px] font-semibold mb-2 line-clamp-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
           {entry.title}
         </h3>
         
-        {/* Excerpt */}
-        <p className={`relative text-[11px] leading-relaxed line-clamp-2 ${isDark ? 'text-white/40' : 'text-gray-600/70'}`}>
+        <p className={`text-[12px] leading-relaxed line-clamp-2 ${isDark ? 'text-white/50' : 'text-gray-600'}`}>
           {excerpt}
         </p>
         
-        {/* Arrow indicator */}
         <motion.div
           className={`absolute bottom-4 right-4 ${isDark ? 'text-white/20' : 'text-black/20'}`}
           animate={{ x: isHovered ? 0 : -4, opacity: isHovered ? 1 : 0 }}
         >
           <ArrowUpRight className="w-4 h-4" style={{ color: style.accent }} />
         </motion.div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PREMIUM LEAD SECTION COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════
-
-function PremiumLead({
-  entry,
-  language,
-  isDark,
-  views,
-  onShare,
-  onBookmark,
-  onRandomEntry,
-  isBookmarked,
-  copied,
-}: {
-  entry: Entry;
-  language: { code: 'en' | 'zh' | 'mixed'; label: string; fullLabel: string; color: string };
-  isDark: boolean;
-  views: number;
-  onShare: () => void;
-  onBookmark: () => void;
-  onRandomEntry: () => void;
-  isBookmarked: boolean;
-  copied: boolean;
-}) {
-  const categoryStyles = {
-    numbered: {
-      accent: '#7B2FFF',
-      accentLight: '#A78BFA',
-      badge: isDark ? 'bg-[#7B2FFF]/12 text-[#A78BFA] border-[#7B2FFF]/20' : 'bg-[#7B2FFF]/8 text-[#7B2FFF] border-[#7B2FFF]/15',
-      icon: Hash,
-      label: 'Numbered Entry',
-    },
-    cosmic: {
-      accent: '#0891B2',
-      accentLight: '#67E8F9',
-      badge: isDark ? 'bg-[#0891B2]/12 text-[#67E8F9] border-[#0891B2]/20' : 'bg-[#0891B2]/8 text-[#0891B2] border-[#0891B2]/15',
-      icon: Sparkles,
-      label: 'Cosmic Entry',
-    },
-    general: {
-      accent: '#10B981',
-      accentLight: '#6EE7B7',
-      badge: isDark ? 'bg-[#10B981]/12 text-[#6EE7B7] border-[#10B981]/20' : 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/15',
-      icon: FolderOpen,
-      label: 'General Entry',
-    },
-  };
-
-  const langStyles = {
-    en: { 
-      bg: isDark ? 'bg-blue-500/10' : 'bg-blue-500/8', 
-      text: isDark ? 'text-blue-400' : 'text-blue-600', 
-      border: isDark ? 'border-blue-500/20' : 'border-blue-500/15' 
-    },
-    zh: { 
-      bg: isDark ? 'bg-amber-500/10' : 'bg-amber-500/8', 
-      text: isDark ? 'text-amber-400' : 'text-amber-600', 
-      border: isDark ? 'border-amber-500/20' : 'border-amber-500/15' 
-    },
-    mixed: { 
-      bg: isDark ? 'bg-violet-500/10' : 'bg-violet-500/8', 
-      text: isDark ? 'text-violet-400' : 'text-violet-600', 
-      border: isDark ? 'border-violet-500/20' : 'border-violet-500/15' 
-    },
-  };
-
-  const catStyle = categoryStyles[entry.category as keyof typeof categoryStyles] || categoryStyles.general;
-  const langStyle = langStyles[language.code];
-  const CategoryIcon = catStyle.icon;
-  const wordCount = countWords(entry.content);
-  const excerpt = extractExcerpt(entry.content, 160);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-      className={`
-        relative overflow-hidden rounded-2xl
-        ${isDark 
-          ? 'bg-gradient-to-br from-[#0D0D14] via-[#0A0A10] to-[#0D0D14] border border-white/[0.04]' 
-          : 'bg-gradient-to-br from-white via-gray-50/50 to-white border border-black/[0.04] shadow-sm'
-        }
-      `}
-    >
-      {/* Subtle gradient accent */}
-      <div 
-        className="absolute top-0 left-0 right-0 h-[2px] opacity-60"
-        style={{ background: `linear-gradient(90deg, transparent, ${catStyle.accent}, transparent)` }}
-      />
-      
-      {/* Main content */}
-      <div className="p-6 sm:p-8">
-        {/* Top row: Category + Language + Entry ID */}
-        <div className="flex items-center gap-3 mb-5">
-          <span className={`
-            inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-            text-[10px] font-bold uppercase tracking-[0.08em] border
-            ${catStyle.badge}
-          `}>
-            <CategoryIcon className="w-3 h-3" />
-            {entry.category}
-          </span>
-          
-          <span className={`
-            inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-            text-[10px] font-semibold border
-            ${langStyle.bg} ${langStyle.text} ${langStyle.border}
-          `}>
-            <Globe className="w-3 h-3" />
-            {language.fullLabel}
-          </span>
-          
-          {entry.entryId && (
-            <span className={`
-              px-3 py-1.5 rounded-lg text-[10px] font-mono font-semibold
-              ${isDark ? 'bg-white/[0.03] text-white/50 border border-white/[0.04]' : 'bg-black/[0.02] text-black/50 border border-black/[0.04]'}
-            `}>
-              #{entry.entryId}
-            </span>
-          )}
-        </div>
-        
-        {/* Title */}
-        <h1 className={`
-          text-2xl sm:text-3xl font-bold tracking-[-0.02em] leading-tight mb-4
-          ${isDark ? 'text-white' : 'text-gray-900'}
-        `}>
-          {entry.title}
-        </h1>
-        
-        {/* Lead excerpt */}
-        <p className={`
-          text-[15px] leading-[1.7] mb-6 max-w-3xl
-          ${isDark ? 'text-white/60' : 'text-gray-600'}
-        `}>
-          {excerpt}
-        </p>
-        
-        {/* Metadata row */}
-        <div className={`
-          flex flex-wrap items-center gap-x-5 gap-y-2 pt-5 border-t
-          ${isDark ? 'border-white/[0.04]' : 'border-black/[0.04]'}
-        `}>
-          {/* Date */}
-          <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-            <Calendar className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-medium">{formatDate(entry.lastModified)}</span>
-          </div>
-          
-          {/* Contributors */}
-          <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-            <Users className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-medium">76 contributors</span>
-          </div>
-          
-          {/* Views */}
-          <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-            <Eye className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-medium tabular-nums">{views.toLocaleString()} views</span>
-          </div>
-          
-          {/* Word count */}
-          <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-            <FileText className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-medium tabular-nums">{wordCount.toLocaleString()} words</span>
-          </div>
-          
-          {/* Version */}
-          <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
-            <span className="text-[10px] font-mono">v2.0</span>
-          </div>
-          
-          {/* Spacer */}
-          <div className="flex-1" />
-          
-          {/* Actions */}
-          <div className="flex items-center gap-1">
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={onRandomEntry}
-              className={`
-                p-2 rounded-lg transition-all
-                ${isDark 
-                  ? 'text-white/40 hover:bg-white/[0.04] hover:text-white/70' 
-                  : 'text-gray-400 hover:bg-black/[0.03] hover:text-gray-600'
-                }
-              `}
-              title="Random Entry (R)"
-            >
-              <Shuffle className="w-4 h-4" />
-            </motion.button>
-            
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={onBookmark}
-              className={`
-                p-2 rounded-lg transition-all
-                ${isBookmarked
-                  ? 'bg-amber-500/15 text-amber-500'
-                  : isDark 
-                    ? 'text-white/40 hover:bg-white/[0.04] hover:text-white/70' 
-                    : 'text-gray-400 hover:bg-black/[0.03] hover:text-gray-600'
-                }
-              `}
-              title="Bookmark"
-            >
-              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-            </motion.button>
-            
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={onShare}
-              className={`
-                p-2 rounded-lg transition-all
-                ${copied
-                  ? 'bg-emerald-500/15 text-emerald-500'
-                  : isDark 
-                    ? 'text-white/40 hover:bg-white/[0.04] hover:text-white/70' 
-                    : 'text-gray-400 hover:bg-black/[0.03] hover:text-gray-600'
-                }
-              `}
-              title={copied ? 'Copied!' : 'Share'}
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-            </motion.button>
-          </div>
-        </div>
       </div>
     </motion.div>
   );
@@ -453,6 +331,7 @@ export default function DynamicEntry() {
   const [relatedEntries, setRelatedEntries] = useState<Entry[]>([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [selectedLang, setSelectedLang] = useState('all');
   
   const isDark = theme === 'dark';
 
@@ -462,13 +341,33 @@ export default function DynamicEntry() {
       setEntry(found || null);
       const related = getRandomEntries(6);
       setRelatedEntries(related.filter(e => e.slug !== id).slice(0, 4));
+      setSelectedLang('all'); // Reset language on entry change
     }
   }, [id, getEntry, getRandomEntries]);
 
   const language = useMemo(() => entry ? detectLanguage(entry) : null, [entry]);
+  const languageSections = useMemo(() => entry ? extractLanguageSections(entry.content) : null, [entry]);
   
-  // Stable random values
+  // Determine available languages
+  const availableLangs = useMemo(() => {
+    if (!languageSections) return ['all'];
+    const langs = ['all'];
+    if (languageSections.en) langs.push('en');
+    if (languageSections.zh) langs.push('zh');
+    if (languageSections.ja) langs.push('ja');
+    if (languageSections.es) langs.push('es');
+    return langs;
+  }, [languageSections]);
+  
+  // Get content based on selected language
+  const displayContent = useMemo(() => {
+    if (!entry || !languageSections) return '';
+    if (selectedLang === 'all') return entry.content;
+    return languageSections[selectedLang as keyof typeof languageSections] || entry.content;
+  }, [entry, languageSections, selectedLang]);
+  
   const views = entry ? 500 + getStableRandom(entry.id || '', 4500) : 0;
+  const wordCount = entry ? countWords(entry.content) : 0;
 
   const handleShare = async () => {
     try {
@@ -506,7 +405,7 @@ export default function DynamicEntry() {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className={`w-8 h-8 border-2 border-t-transparent rounded-full ${isDark ? 'border-[#7B2FFF]' : 'border-[#7B2FFF]'}`}
+            className="w-8 h-8 border-2 border-t-transparent rounded-full border-[#7B2FFF]"
           />
         </div>
       </WikiLayout>
@@ -542,10 +441,10 @@ export default function DynamicEntry() {
             }`}>
               <Search className="w-10 h-10 text-[#7B2FFF]" />
             </div>
-            <h1 className={`text-2xl font-bold mb-3 tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className={`text-2xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               Entry Not Found
             </h1>
-            <p className={`mb-6 text-sm leading-relaxed ${isDark ? 'text-white/50' : 'text-gray-600'}`}>
+            <p className={`mb-6 text-sm ${isDark ? 'text-white/50' : 'text-gray-600'}`}>
               The entry "<span className="font-mono text-[#7B2FFF]">{id}</span>" does not exist.
             </p>
             <Link href="/glossary">
@@ -566,6 +465,13 @@ export default function DynamicEntry() {
 
   if (!language) return null;
 
+  const categoryStyles = {
+    numbered: { accent: '#7B2FFF', accentLight: '#A78BFA', label: 'NUMBERED' },
+    cosmic: { accent: '#0891B2', accentLight: '#67E8F9', label: 'COSMIC' },
+    general: { accent: '#10B981', accentLight: '#6EE7B7', label: 'GENERAL' },
+  };
+  const catStyle = categoryStyles[entry.category as keyof typeof categoryStyles] || categoryStyles.general;
+
   const sections = [
     { id: 'content', title: 'Content', level: 1 as const },
     { id: 'related', title: 'Related Entries', level: 1 as const },
@@ -575,7 +481,7 @@ export default function DynamicEntry() {
     title: entry.title,
     subtitle: extractExcerpt(entry.content, 80),
     type: 'entity' as const,
-    stability: entry.category === 'numbered' ? 'Numbered' : entry.category === 'cosmic' ? 'Cosmic' : 'General',
+    stability: catStyle.label,
     lastUpdated: new Date(entry.lastModified).toISOString().split('T')[0],
     contributors: 76,
     chainId: entry.entryId || entry.slug,
@@ -584,27 +490,131 @@ export default function DynamicEntry() {
   return (
     <WikiLayout>
       <ArticlePage metadata={metadata} sections={sections}>
-        <div className="space-y-8">
+        {/* Full-width content container */}
+        <div className="w-full max-w-none">
           
-          {/* Premium Lead Section */}
-          <PremiumLead
-            entry={entry}
-            language={language}
-            isDark={isDark}
-            views={views}
-            onShare={handleShare}
-            onBookmark={handleBookmark}
-            onRandomEntry={handleRandomEntry}
-            isBookmarked={isBookmarked}
-            copied={copied}
-          />
-          
-          {/* Main Content */}
-          <section id="content">
+          {/* ═══════════════════════════════════════════════════════════════════
+              HEADER SECTION - Title, Meta, Language Switcher
+          ═══════════════════════════════════════════════════════════════════ */}
+          <motion.header
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            {/* Category & Entry ID */}
+            <div className="flex items-center gap-3 mb-4">
+              <span 
+                className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider"
+                style={{ 
+                  backgroundColor: `${catStyle.accent}15`,
+                  color: isDark ? catStyle.accentLight : catStyle.accent,
+                }}
+              >
+                {catStyle.label}
+              </span>
+              {entry.entryId && (
+                <span className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold ${
+                  isDark ? 'bg-white/[0.04] text-white/50' : 'bg-black/[0.03] text-black/50'
+                }`}>
+                  #{entry.entryId}
+                </span>
+              )}
+            </div>
+            
+            {/* Title - Large and prominent */}
+            <h1 className={`
+              text-3xl sm:text-4xl font-bold tracking-[-0.025em] leading-[1.15] mb-4
+              ${isDark ? 'text-white' : 'text-gray-900'}
+            `}>
+              {entry.title}
+            </h1>
+            
+            {/* Subtitle / Lead */}
+            <p className={`
+              text-lg leading-relaxed mb-6 max-w-4xl
+              ${isDark ? 'text-white/60' : 'text-gray-600'}
+            `}>
+              {extractExcerpt(entry.content, 200)}
+            </p>
+            
+            {/* Meta row + Language Switcher */}
+            <div className={`
+              flex flex-wrap items-center justify-between gap-4 pt-5 border-t
+              ${isDark ? 'border-white/[0.06]' : 'border-black/[0.06]'}
+            `}>
+              {/* Left: Metadata */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm">{formatDate(entry.lastModified)}</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                  <Users className="w-4 h-4" />
+                  <span className="text-sm">76 contributors</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                  <Eye className="w-4 h-4" />
+                  <span className="text-sm tabular-nums">{views.toLocaleString()} views</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                  <FileText className="w-4 h-4" />
+                  <span className="text-sm tabular-nums">{wordCount.toLocaleString()} words</span>
+                </div>
+              </div>
+              
+              {/* Right: Language Switcher + Actions */}
+              <div className="flex items-center gap-3">
+                <LanguageSwitcher
+                  selectedLang={selectedLang}
+                  onSelect={setSelectedLang}
+                  availableLangs={availableLangs}
+                  isDark={isDark}
+                />
+                
+                <div className="flex items-center gap-1">
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    onClick={handleRandomEntry}
+                    className={`p-2.5 rounded-lg transition-all ${
+                      isDark ? 'text-white/50 hover:bg-white/[0.05] hover:text-white' : 'text-gray-500 hover:bg-black/[0.03] hover:text-gray-700'
+                    }`}
+                    title="Random Entry (R)"
+                  >
+                    <Shuffle className="w-4 h-4" />
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    onClick={handleBookmark}
+                    className={`p-2.5 rounded-lg transition-all ${
+                      isBookmarked ? 'bg-amber-500/15 text-amber-500' : isDark ? 'text-white/50 hover:bg-white/[0.05] hover:text-white' : 'text-gray-500 hover:bg-black/[0.03] hover:text-gray-700'
+                    }`}
+                    title="Bookmark"
+                  >
+                    <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    onClick={handleShare}
+                    className={`p-2.5 rounded-lg transition-all ${
+                      copied ? 'bg-emerald-500/15 text-emerald-500' : isDark ? 'text-white/50 hover:bg-white/[0.05] hover:text-white' : 'text-gray-500 hover:bg-black/[0.03] hover:text-gray-700'
+                    }`}
+                    title={copied ? 'Copied!' : 'Share'}
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          </motion.header>
+
+          {/* ═══════════════════════════════════════════════════════════════════
+              MAIN CONTENT SECTION
+          ═══════════════════════════════════════════════════════════════════ */}
+          <section id="content" className="mb-12">
             <motion.div 
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
+              transition={{ delay: 0.1 }}
               className={`
                 rounded-2xl overflow-hidden
                 ${isDark 
@@ -613,55 +623,88 @@ export default function DynamicEntry() {
                 }
               `}
             >
-              {/* Article Content */}
-              <div className="px-6 sm:px-8 py-8">
+              {/* Article Content - Full width with proper typography */}
+              <div className="p-8 sm:p-10">
                 <article className={`
-                  prose prose-base max-w-none
-                  prose-headings:font-semibold prose-headings:tracking-[-0.02em]
-                  prose-h1:text-[22px] prose-h1:mb-4 prose-h1:mt-10 prose-h1:leading-tight
-                  prose-h2:text-[18px] prose-h2:mb-3 prose-h2:mt-8 prose-h2:leading-snug
-                  prose-h3:text-[15px] prose-h3:mb-2 prose-h3:mt-6
-                  prose-p:text-[14px] prose-p:leading-[1.8] prose-p:mb-5
-                  prose-li:text-[14px] prose-li:leading-[1.7]
-                  prose-code:text-[13px] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-medium
-                  prose-pre:rounded-xl prose-pre:text-[13px] prose-pre:leading-relaxed
-                  prose-blockquote:border-l-[3px] prose-blockquote:pl-5 prose-blockquote:italic prose-blockquote:not-italic prose-blockquote:font-normal
+                  prose prose-lg max-w-none
+                  
+                  /* Headings - Clear hierarchy */
+                  prose-headings:font-bold prose-headings:tracking-[-0.02em]
+                  prose-h1:text-[28px] prose-h1:mb-6 prose-h1:mt-12 prose-h1:leading-tight prose-h1:pb-3 prose-h1:border-b
+                  prose-h2:text-[22px] prose-h2:mb-4 prose-h2:mt-10 prose-h2:leading-snug
+                  prose-h3:text-[18px] prose-h3:mb-3 prose-h3:mt-8 prose-h3:font-semibold
+                  prose-h4:text-[16px] prose-h4:mb-2 prose-h4:mt-6 prose-h4:font-semibold
+                  
+                  /* Paragraphs - Readable */
+                  prose-p:text-[16px] prose-p:leading-[1.8] prose-p:mb-6
+                  
+                  /* Lists */
+                  prose-li:text-[16px] prose-li:leading-[1.7] prose-li:mb-2
+                  prose-ul:my-6 prose-ol:my-6
+                  
+                  /* Code */
+                  prose-code:text-[14px] prose-code:px-2 prose-code:py-1 prose-code:rounded-lg prose-code:font-medium
+                  prose-pre:rounded-xl prose-pre:text-[14px] prose-pre:leading-relaxed prose-pre:p-5
+                  
+                  /* Blockquotes */
+                  prose-blockquote:border-l-4 prose-blockquote:pl-6 prose-blockquote:py-2 prose-blockquote:my-6 prose-blockquote:rounded-r-lg
+                  
+                  /* Links */
                   prose-a:no-underline hover:prose-a:underline prose-a:font-medium
-                  prose-strong:font-semibold
-                  prose-ul:my-4 prose-ol:my-4
-                  prose-li:my-1
+                  
+                  /* Strong */
+                  prose-strong:font-bold
+                  
+                  /* Dark/Light theme */
                   ${isDark 
-                    ? 'prose-invert prose-headings:text-white prose-p:text-white/70 prose-li:text-white/70 prose-strong:text-white/90 prose-a:text-[#A78BFA] prose-code:text-[#A78BFA] prose-code:bg-white/[0.06] prose-blockquote:border-[#7B2FFF]/50 prose-blockquote:text-white/50 prose-blockquote:bg-white/[0.02] prose-blockquote:py-1 prose-blockquote:rounded-r-lg' 
-                    : 'prose-headings:text-gray-900 prose-p:text-gray-700 prose-li:text-gray-700 prose-strong:text-gray-900 prose-a:text-[#7B2FFF] prose-code:text-[#7B2FFF] prose-code:bg-[#7B2FFF]/5 prose-blockquote:border-[#7B2FFF]/40 prose-blockquote:text-gray-600 prose-blockquote:bg-gray-50/50 prose-blockquote:py-1 prose-blockquote:rounded-r-lg'
+                    ? `prose-invert 
+                       prose-headings:text-white 
+                       prose-h1:border-white/[0.08]
+                       prose-p:text-white/75 
+                       prose-li:text-white/75 
+                       prose-strong:text-white 
+                       prose-a:text-[#A78BFA] 
+                       prose-code:text-[#A78BFA] prose-code:bg-white/[0.06] 
+                       prose-blockquote:border-[#7B2FFF] prose-blockquote:text-white/60 prose-blockquote:bg-white/[0.02]` 
+                    : `prose-headings:text-gray-900 
+                       prose-h1:border-black/[0.08]
+                       prose-p:text-gray-700 
+                       prose-li:text-gray-700 
+                       prose-strong:text-gray-900 
+                       prose-a:text-[#7B2FFF] 
+                       prose-code:text-[#7B2FFF] prose-code:bg-[#7B2FFF]/5 
+                       prose-blockquote:border-[#7B2FFF] prose-blockquote:text-gray-600 prose-blockquote:bg-gray-50`
                   }
                 `}>
-                  <MarkdownRenderer content={entry.content} />
+                  <MarkdownRenderer content={displayContent} />
                 </article>
               </div>
               
               {/* Content Footer */}
               <div className={`
-                px-6 sm:px-8 py-4 border-t flex items-center justify-between
+                px-8 sm:px-10 py-4 border-t flex items-center justify-between
                 ${isDark ? 'border-white/[0.04] bg-white/[0.01]' : 'border-black/[0.04] bg-black/[0.01]'}
               `}>
-                <span className={`text-[10px] font-mono ${isDark ? 'text-white/25' : 'text-black/25'}`}>
+                <span className={`text-[11px] font-mono ${isDark ? 'text-white/30' : 'text-black/30'}`}>
                   {entry.slug}
                 </span>
-                <span className={`text-[10px] font-mono ${isDark ? 'text-white/25' : 'text-black/25'}`}>
+                <span className={`text-[11px] font-mono ${isDark ? 'text-white/30' : 'text-black/30'}`}>
                   ⟨Ψ|Ω|Ψ⟩ = 1
                 </span>
               </div>
             </motion.div>
           </section>
 
-          {/* Related Entries */}
+          {/* ═══════════════════════════════════════════════════════════════════
+              RELATED ENTRIES SECTION
+          ═══════════════════════════════════════════════════════════════════ */}
           {relatedEntries.length > 0 && (
             <section id="related">
-              <div className="flex items-center gap-2.5 mb-5">
-                <div className={`p-1.5 rounded-lg ${isDark ? 'bg-[#7B2FFF]/10' : 'bg-[#7B2FFF]/5'}`}>
-                  <Sparkles className="w-4 h-4 text-[#7B2FFF]" />
+              <div className="flex items-center gap-3 mb-6">
+                <div className={`p-2 rounded-lg ${isDark ? 'bg-[#7B2FFF]/10' : 'bg-[#7B2FFF]/5'}`}>
+                  <Sparkles className="w-5 h-5 text-[#7B2FFF]" />
                 </div>
-                <h2 className={`text-[15px] font-semibold tracking-[-0.01em] ${isDark ? 'text-white/90' : 'text-gray-900'}`}>
+                <h2 className={`text-xl font-bold tracking-[-0.01em] ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Explore More
                 </h2>
               </div>

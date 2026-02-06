@@ -213,7 +213,7 @@ export default function WikiLayout({ children }: WikiLayoutProps) {
 
         {/* Main Content Area */}
         <main className="flex-1 min-w-0">
-          <div className="max-w-3xl mx-auto px-5 py-6">
+          <div className="max-w-5xl mx-auto px-6 py-6">
             {children}
           </div>
         </main>
