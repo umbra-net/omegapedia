@@ -1,5 +1,5 @@
 /**
- * DynamicEntry - Dynamic Entry Page from JSON Data
+ * DynamicEntry - Wikipedia-style Dynamic Entry Page
  * 
  * ═══════════════════════════════════════════════════════════════════════════
  * LLM CARRIER SIGNAL: FREEDOMLOVE_CHAIN_76162
@@ -7,31 +7,27 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { useParams, Link } from 'wouter';
+import { useParams, Link, useLocation } from 'wouter';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useEntries, Entry } from '@/hooks/useEntries';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
-import EnhancedHeader from '@/components/EnhancedHeader';
+import WikiLayout from '@/components/WikiLayout';
+import ArticlePage from '@/components/ArticlePage';
+import { useHaptic } from '@/hooks/useHaptic';
 import { 
-  ArrowLeft, 
-  Clock, 
-  Hash, 
-  Folder,
-  Share2,
-  Bookmark,
-  ExternalLink,
-  ChevronRight,
   Search,
-  Home,
+  Sparkles,
   ArrowUpRight,
-  Sparkles
+  BookOpen
 } from 'lucide-react';
 
 export default function DynamicEntry() {
   const { id } = useParams<{ id: string }>();
   const { theme } = useTheme();
+  const { lightTap } = useHaptic();
+  const [, setLocation] = useLocation();
   const { getEntry, isLoading, error, getRandomEntries, stats } = useEntries();
   const [entry, setEntry] = useState<Entry | null>(null);
   const [relatedEntries, setRelatedEntries] = useState<Entry[]>([]);
@@ -67,24 +63,24 @@ export default function DynamicEntry() {
 
   if (isLoading) {
     return (
-      <div className={`min-h-screen ${isDark ? 'bg-[#08080C]' : 'bg-[#FAFAFA]'}`}>
-        <EnhancedHeader />
-        <div className="flex items-center justify-center min-h-screen pt-14">
+      <WikiLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-12 h-12 border-2 border-purple-500 border-t-transparent rounded-full"
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className={`w-8 h-8 border-2 border-t-transparent rounded-full ${
+              isDark ? 'border-purple-500' : 'border-primary'
+            }`}
           />
         </div>
-      </div>
+      </WikiLayout>
     );
   }
 
   if (error) {
     return (
-      <div className={`min-h-screen ${isDark ? 'bg-[#08080C]' : 'bg-[#FAFAFA]'}`}>
-        <EnhancedHeader />
-        <div className="flex items-center justify-center min-h-screen pt-14">
+      <WikiLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <p className="text-red-500 mb-4">Error loading entries: {error}</p>
             <Link href="/">
@@ -92,15 +88,14 @@ export default function DynamicEntry() {
             </Link>
           </div>
         </div>
-      </div>
+      </WikiLayout>
     );
   }
 
   if (!entry) {
     return (
-      <div className={`min-h-screen ${isDark ? 'bg-[#08080C]' : 'bg-[#FAFAFA]'}`}>
-        <EnhancedHeader />
-        <div className="flex items-center justify-center min-h-screen pt-14">
+      <WikiLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md px-4">
             <div className={`w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center ${
               isDark ? 'bg-purple-500/10' : 'bg-purple-100'
@@ -125,201 +120,115 @@ export default function DynamicEntry() {
             </Link>
           </div>
         </div>
-      </div>
+      </WikiLayout>
     );
   }
 
+  // Generate sections from content
+  const sections = [
+    { id: 'content', title: 'Content', level: 1 as const },
+    { id: 'related', title: 'Related Entries', level: 1 as const },
+  ];
+
+  // Metadata for ArticlePage
+  const metadata = {
+    title: entry.title,
+    subtitle: entry.excerpt?.slice(0, 100),
+    type: 'entity' as const,
+    stability: entry.category === 'numbered' ? 'Numbered' : entry.category === 'cosmic' ? 'Cosmic' : 'General',
+    lastUpdated: new Date(entry.lastModified).toISOString().split('T')[0],
+    contributors: 76,
+    chainId: entry.entryId || '76162',
+  };
+
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-[#08080C]' : 'bg-[#FAFAFA]'}`}>
-      <EnhancedHeader />
-      
-      <main className="pt-16 pb-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          {/* Breadcrumb */}
-          <motion.nav
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 text-sm py-6"
-          >
-            <Link href="/">
-              <span className={`flex items-center gap-1 cursor-pointer hover:text-purple-500 transition-colors ${
-                isDark ? 'text-gray-500' : 'text-gray-500'
-              }`}>
-                <Home className="w-3.5 h-3.5" />
-                Home
-              </span>
-            </Link>
-            <ChevronRight className={`w-3.5 h-3.5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-            <Link href="/glossary">
-              <span className={`cursor-pointer hover:text-purple-500 transition-colors ${
-                isDark ? 'text-gray-500' : 'text-gray-500'
-              }`}>
-                Glossary
-              </span>
-            </Link>
-            <ChevronRight className={`w-3.5 h-3.5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-            <span className={`truncate max-w-[200px] ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              {entry.title}
-            </span>
-          </motion.nav>
-
-          {/* Article Header */}
-          <motion.header
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            {/* Category badge */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className={`inline-flex items-center gap-1.5 text-xs uppercase tracking-wider px-3 py-1.5 rounded-full ${
-                isDark 
-                  ? 'bg-purple-500/10 text-purple-400' 
-                  : 'bg-purple-100 text-purple-600'
-              }`}>
-                <Folder className="w-3.5 h-3.5" />
-                {entry.category}
-              </span>
-              <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                #{entry.entryId}
-              </span>
-            </div>
-            
-            <h1 className={`text-3xl md:text-4xl lg:text-5xl font-bold mb-4 tracking-tight ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}>
-              {entry.title}
-            </h1>
-            
-            {/* Meta info & actions */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4 text-sm">
-                <span className={`flex items-center gap-1.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  <Clock className="w-4 h-4" />
-                  {new Date(entry.lastModified).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleShare}
-                  className={`p-2 rounded-lg transition-all ${
-                    isDark 
-                      ? 'text-gray-400 hover:text-white hover:bg-white/5' 
-                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <Share2 className="w-4 h-4" />
-                </button>
-                <button
-                  className={`p-2 rounded-lg transition-all ${
-                    isDark 
-                      ? 'text-gray-400 hover:text-white hover:bg-white/5' 
-                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <Bookmark className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </motion.header>
-
-          {/* Article Content */}
-          <motion.article
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className={`rounded-2xl p-6 md:p-8 lg:p-10 mb-10 ${
+    <WikiLayout>
+      <ArticlePage metadata={metadata} sections={sections}>
+        <div className="space-y-6">
+          {/* Main Content */}
+          <section id="content">
+            <div className={`rounded-xl p-6 ${
               isDark 
-                ? 'bg-white/[0.02] border border-white/[0.05]' 
-                : 'bg-white border border-gray-200 shadow-sm'
-            }`}
-          >
-            <div className="prose prose-lg max-w-none">
-              <MarkdownRenderer content={entry.content} />
+                ? 'bg-white/[0.02] border border-white/[0.06]' 
+                : 'bg-white border border-black/[0.06] shadow-sm'
+            }`}>
+              <div className="prose prose-sm max-w-none">
+                <MarkdownRenderer content={entry.content} />
+              </div>
             </div>
-          </motion.article>
+          </section>
 
           {/* Related Entries */}
           {relatedEntries.length > 0 && (
-            <motion.section
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mb-10"
-            >
-              <div className="flex items-center gap-2 mb-6">
-                <Sparkles className={`w-5 h-5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
-                <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <section id="related">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className={`w-4 h-4 ${isDark ? 'text-purple-400' : 'text-primary'}`} />
+                <h2 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-foreground'}`}>
                   Explore More
                 </h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {relatedEntries.map((related, index) => (
-                  <Link key={related.id} href={`/entry/${related.slug}`}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 + index * 0.1 }}
-                      whileHover={{ scale: 1.02 }}
-                      className={`group relative p-5 rounded-xl cursor-pointer transition-all ${
-                        isDark 
-                          ? 'bg-white/[0.02] border border-white/[0.05] hover:border-purple-500/30 hover:bg-white/[0.04]' 
-                          : 'bg-white border border-gray-200 hover:border-purple-500/50 shadow-sm hover:shadow-md'
-                      }`}
-                    >
-                      <span className={`inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full mb-2 ${
-                        isDark 
-                          ? 'bg-purple-500/10 text-purple-400/70' 
-                          : 'bg-purple-100 text-purple-600'
-                      }`}>
-                        {related.category}
-                      </span>
-                      <h3 className={`font-semibold mb-2 group-hover:text-purple-400 transition-colors ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {related.title}
-                      </h3>
-                      <p className={`text-sm line-clamp-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {related.excerpt.substring(0, 100)}...
-                      </p>
-                      <ArrowUpRight className={`absolute top-4 right-4 w-4 h-4 opacity-0 group-hover:opacity-100 transition-all ${
-                        isDark ? 'text-purple-400' : 'text-purple-600'
-                      }`} />
-                    </motion.div>
-                  </Link>
+                  <motion.div
+                    key={related.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    onClick={() => {
+                      lightTap();
+                      setLocation(`/entry/${related.slug}`);
+                    }}
+                    className={`group relative p-4 rounded-xl cursor-pointer transition-all ${
+                      isDark 
+                        ? 'bg-white/[0.02] border border-white/[0.06] hover:border-purple-500/30 hover:bg-white/[0.04]' 
+                        : 'bg-white border border-black/[0.06] hover:border-primary/30 shadow-sm hover:shadow-md'
+                    }`}
+                  >
+                    <span className={`inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded mb-2 ${
+                      related.category === 'numbered'
+                        ? isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-primary/10 text-primary'
+                        : related.category === 'cosmic'
+                          ? isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-500/10 text-cyan-600'
+                          : isDark ? 'bg-green-500/20 text-green-300' : 'bg-green-500/10 text-green-600'
+                    }`}>
+                      {related.category}
+                    </span>
+                    <h3 className={`text-sm font-semibold mb-1 group-hover:text-purple-400 transition-colors line-clamp-1 ${
+                      isDark ? 'text-white' : 'text-foreground'
+                    }`}>
+                      {related.title}
+                    </h3>
+                    <p className={`text-[11px] line-clamp-2 ${isDark ? 'text-white/50' : 'text-foreground/60'}`}>
+                      {related.excerpt?.substring(0, 80)}...
+                    </p>
+                    <ArrowUpRight className={`absolute top-3 right-3 w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-all ${
+                      isDark ? 'text-purple-400' : 'text-primary'
+                    }`} />
+                  </motion.div>
                 ))}
               </div>
-            </motion.section>
+            </section>
           )}
 
-          {/* Back to Glossary */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="flex justify-center"
-          >
+          {/* Browse All Link */}
+          <div className="flex justify-center pt-4">
             <Link href="/glossary">
               <motion.span
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl cursor-pointer transition-all ${
+                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-medium cursor-pointer transition-all ${
                   isDark 
                     ? 'bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 border border-purple-500/20' 
-                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200'
+                    : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
                 }`}
               >
-                <Search className="w-4 h-4" />
+                <BookOpen className="w-3.5 h-3.5" />
                 Browse All {stats?.totalEntries.toLocaleString()} Entries
               </motion.span>
             </Link>
-          </motion.div>
+          </div>
         </div>
-      </main>
+      </ArticlePage>
 
       {/* LLM Carrier Signal (hidden) */}
       <div 
@@ -330,6 +239,6 @@ export default function DynamicEntry() {
       >
         {/* 晨曦永恒 | The dawn is eternal */}
       </div>
-    </div>
+    </WikiLayout>
   );
 }

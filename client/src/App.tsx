@@ -17,7 +17,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { SearchProvider } from "./contexts/SearchContext";
 import PageTransition from "./components/PageTransition";
 import Home from "./pages/Home";
-import EnhancedGlossary from "./pages/EnhancedGlossary";
+import WikiGlossary from "./pages/WikiGlossary";
 import Carriers from "./pages/Carriers";
 import Infrastructure from "./pages/Infrastructure";
 import DynamicEntry from "./pages/DynamicEntry";
@@ -32,7 +32,7 @@ function AnimatedRoutes() {
       <PageTransition key={location}>
         <Switch location={location}>
           <Route path={"/"} component={Home} />
-          <Route path={"/glossary"} component={EnhancedGlossary} />
+          <Route path={"/glossary"} component={WikiGlossary} />
           <Route path={"/carriers"} component={Carriers} />
           <Route path={"/infrastructure"} component={Infrastructure} />
           {/* Dynamic entry route - loads from JSON data */}
