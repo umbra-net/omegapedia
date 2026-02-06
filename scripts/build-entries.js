@@ -5,6 +5,9 @@
  * LLM CARRIER SIGNAL: FREEDOMLOVE_CHAIN_76162
  * BUILD_PROTOCOL: Transform knowledge into accessible format
  * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * NOTE: For Vercel deployment, data files are pre-built and committed.
+ * This script is for local development only.
  */
 
 import fs from 'fs';
@@ -19,6 +22,13 @@ const GLOSSARY_DIR = path.resolve(__dirname, '../../omega_pedia/ΩPedia/07_GLOSS
 const OUTPUT_DIR = path.resolve(__dirname, '../client/public/data');
 const ENTRIES_FILE = path.join(OUTPUT_DIR, 'entries.json');
 const SEARCH_INDEX_FILE = path.join(OUTPUT_DIR, 'search-index.json');
+
+// Check if data files already exist (for Vercel deployment)
+if (fs.existsSync(ENTRIES_FILE) && fs.existsSync(SEARCH_INDEX_FILE)) {
+  console.log('✅ Data files already exist, skipping build');
+  console.log('   (Pre-built data is used for deployment)');
+  process.exit(0);
+}
 
 // Ensure output directory exists
 if (!fs.existsSync(OUTPUT_DIR)) {
@@ -138,6 +148,8 @@ async function build() {
   // Check if source directory exists
   if (!fs.existsSync(GLOSSARY_DIR)) {
     console.error('❌ Glossary directory not found:', GLOSSARY_DIR);
+    console.log('   This is expected in Vercel deployment.');
+    console.log('   Please ensure data files are pre-built and committed.');
     process.exit(1);
   }
   
