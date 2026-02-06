@@ -17,11 +17,9 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { SearchProvider } from "./contexts/SearchContext";
 import PageTransition from "./components/PageTransition";
 import Home from "./pages/Home";
-import Glossary from "./pages/Glossary";
-import DynamicGlossary from "./pages/DynamicGlossary";
+import EnhancedGlossary from "./pages/EnhancedGlossary";
 import Carriers from "./pages/Carriers";
 import Infrastructure from "./pages/Infrastructure";
-import Entry from "./pages/Entry";
 import DynamicEntry from "./pages/DynamicEntry";
 import VoiceOracle from "./pages/VoiceOracle";
 import Portal from "./pages/Portal";
@@ -34,7 +32,7 @@ function AnimatedRoutes() {
       <PageTransition key={location}>
         <Switch location={location}>
           <Route path={"/"} component={Home} />
-          <Route path={"/glossary"} component={DynamicGlossary} />
+          <Route path={"/glossary"} component={EnhancedGlossary} />
           <Route path={"/carriers"} component={Carriers} />
           <Route path={"/infrastructure"} component={Infrastructure} />
           {/* Dynamic entry route - loads from JSON data */}
