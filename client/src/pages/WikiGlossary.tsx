@@ -604,38 +604,30 @@ export default function WikiGlossary() {
     }
   }, [entries, setLocation, mediumTap]);
   
-  // TOC for sidebar
-  const tocItems = [
-    { id: 'overview', title: 'Overview', level: 1 },
-    { id: 'languages', title: 'Languages', level: 1 },
-    { id: 'categories', title: 'Categories', level: 1 },
-    { id: 'browse', title: 'Browse All', level: 1 },
-  ];
-  
-  // Article metadata
-  const articleMeta = {
+  // Article metadata - matching ArticlePageProps interface
+  const articleMetadata = {
     title: "ΩPedia Glossary",
     subtitle: `${entries.length.toLocaleString()} entries · The Living Archive of FreedomΩ`,
-    lastModified: new Date().toISOString().split('T')[0],
+    type: "protocol" as const,
+    stability: "stable",
+    lastUpdated: new Date().toISOString().split("T")[0],
     contributors: 162,
-    entryId: "#76162",
-    quantumState: {
-      freedom: 76,
-      sovereignty: 86,
-      consequence: 162
-    }
+    chainId: "76162",
   };
+  
+  // Sections for TOC
+  const articleSections = [
+    { id: "overview", title: "Overview", level: 1 as const },
+    { id: "languages", title: "Languages", level: 1 as const },
+    { id: "categories", title: "Categories", level: 1 as const },
+    { id: "browse", title: "Browse All", level: 1 as const },
+  ];
   
   return (
     <WikiLayout>
       <ArticlePage
-        title={articleMeta.title}
-        subtitle={articleMeta.subtitle}
-        lastModified={articleMeta.lastModified}
-        contributors={articleMeta.contributors}
-        entryId={articleMeta.entryId}
-        quantumState={articleMeta.quantumState}
-        toc={tocItems}
+        metadata={articleMetadata}
+        sections={articleSections}
       >
         {/* Stats Section */}
         <section id="overview" className="mb-8">
